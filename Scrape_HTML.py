@@ -3,11 +3,14 @@ from bs4 import BeautifulSoup
 import requests
 import html2text
 import multiprocessing
+import unidecode
+from timeit import Timer
 
-def get_url_content(link):
+
+def html_helper(link):
     """
-    Return text visible on html page.
-    Note: could have used unidecode(soup.text)
+    Helper function to return html text
+    Note: consider using unidecode(soup.text)
     """
     h = html2text.HTML2Text()
     h.ignore_links = True
@@ -20,7 +23,22 @@ def get_url_content(link):
         return "empty"
 
 
+def unidecode_helper(link):
+    """
+    Helper function to return html text
+    """
+    r = requests.get(link, allow_redirects=False)
+    soup = BeautifulSoup(r.text)
+    if r.status_code == 200:
+        return unidecode(soup.text)
+    else:
+        return "empty"
+
+
 def links_parallel(url_fn, links_lst):
+    """
+    Return text visible on html page.
+    """
     pool = multiprocessing.Pool(4)
     processed_links = pool.map(url_fn, links_lst)
     return processed_links
@@ -40,4 +58,9 @@ if __name__ == '__main__':
              link.get('href').endswith('.pdf')]
     d = {'links': links}
     df = pd.DataFrame(d)
-    processed_links = links_parallel(get_url_content, links[:30])
+    # processed_links = links_parallel(html_helper, links)
+    t1 = Timer(lambda: links_parallel(html_helper, links))
+    t2 = Timer(lambda: links_parallel(unidecode_helper, links))
+    print "it took {0} for html2 helper to finish".format(t1.timeit(1))
+    print "it took {0} for unidecode to finish".format(t2.timeit(1))
+    # df['text'] = processed_links
