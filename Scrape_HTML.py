@@ -3,33 +3,37 @@ from bs4 import BeautifulSoup
 import requests
 import html2text
 import multiprocessing
-import unidecode
+from unidecode import unidecode
 from timeit import Timer
 
 
 def html_helper(link):
     """
-    Helper function to return html text
-    Note: consider using unidecode(soup.text)
+    Helper function to return html text.
     """
-    h = html2text.HTML2Text()
-    h.ignore_links = True
-    h.ignore_images = True
-    h.ignore_emphasis = True
-    r = requests.get(link, allow_redirects=False)
-    if r.status_code == 200:
-        return h.handle(r.text)
+    try:
+        page = requests.get(link, allow_redirects=False)
+    except requests.exceptions.ConnectionError:
+        page = requests.Response()
+        page.status_code = 404
+    if page.status_code == 200:
+        h = html2text.HTML2Text()
+        h.ignore_links = True
+        h.ignore_images = True
+        h.ignore_emphasis = True
+        return h.handle(page.text)
     else:
         return "empty"
 
 
 def unidecode_helper(link):
     """
-    Helper function to return html text
+    Helper function to return html text.
+    Note: this is roughly 2x faster than other helper.
     """
     r = requests.get(link, allow_redirects=False)
-    soup = BeautifulSoup(r.text)
     if r.status_code == 200:
+        soup = BeautifulSoup(r.text, 'html.parser')
         return unidecode(soup.text)
     else:
         return "empty"
@@ -50,7 +54,7 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    file_path = 'Data/bookmarks.html'
+    file_path = 'Data/bookmarks_chrome.html'
     with open(file_path, 'r') as f:
         soup = BeautifulSoup(f, 'html.parser')
     links = [link.get('href') for link in soup.find_all('a') if
@@ -58,9 +62,11 @@ if __name__ == '__main__':
              link.get('href').endswith('.pdf')]
     d = {'links': links}
     df = pd.DataFrame(d)
-    # processed_links = links_parallel(html_helper, links)
-    t1 = Timer(lambda: links_parallel(html_helper, links))
-    t2 = Timer(lambda: links_parallel(unidecode_helper, links))
-    print "it took {0} for html2 helper to finish".format(t1.timeit(1))
-    print "it took {0} for unidecode to finish".format(t2.timeit(1))
-    # df['text'] = processed_links
+    processed_links = links_parallel(html_helper, links)
+    # t1 = Timer(lambda: links_parallel(html_helper, links))
+    #processed_links = links_parallel(unidecode_helper, links)
+    #t2 = Timer(lambda: links_parallel(unidecode_helper, links))
+    # print "it took {0} for html2 helper to finish".format(t1.timeit(1))
+    #print "it took {0} for unidecode to finish".format(t2.timeit(1))
+    df['text'] = processed_links
+    df.to_pickle('Data/df_website_content.pkl')
