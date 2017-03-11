@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import requests
 import html2text
 import multiprocessing
-from unidecode import unidecode
 
 
 def html_helper(link):
