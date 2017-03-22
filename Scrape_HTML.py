@@ -7,12 +7,12 @@ import multiprocessing
 
 def html_helper(link):
     """
-    Helper function to return html text.
+    Returns all visible text on a webpage
     """
     try:
         page = requests.get(link, timeout=3.05)
     except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout,
-           requests.packages.urllib3.exceptions.LocationValueError) as e:
+            requests.packages.urllib3.exceptions.LocationValueError) as e:
         page = requests.Response()
         page.status_code = 404
     if (not page.history and page.status_code == 200) or \
@@ -26,9 +26,26 @@ def html_helper(link):
         return "empty"
 
 
+def get_paragraph_txt(link):
+    """
+    Return all paragraph text within the body tag
+    """
+    try:
+        page = requests.get(link, timeout=3.05)
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout,
+            requests.packages.urllib3.exceptions.LocationValueError) as e:
+        page = requests.Response()
+        page.status_code = 404
+    if (not page.history and page.status_code == 200) or \
+       (page.history and page.history[0].status_code == 301):
+        soup = BeautifulSoup(page.content, 'html.parser')
+        text = [txt.get_text() for txt in soup.select('body p')]
+        return ' '.join(text)
+
+
 def links_parallel(url_fn, links_lst):
     """
-    Return text visible on html page.
+    Return the output of an html helper function
     """
     pool = multiprocessing.Pool(4)
     processed_links = pool.map(url_fn, links_lst)
