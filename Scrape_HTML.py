@@ -40,7 +40,9 @@ def get_paragraph_txt(link):
        (page.history and page.history[0].status_code == 301):
         soup = BeautifulSoup(page.content, 'html.parser')
         text = [txt.get_text() for txt in soup.select('body p')]
-        return ' '.join(text)
+        return ' '.join(text).encode('utf-8')
+    else:
+        return "empty"
 
 
 def links_parallel(url_fn, links_lst):
@@ -66,6 +68,7 @@ if __name__ == '__main__':
              link.get('href').endswith('.pdf')]
     d = {'links': links}
     df = pd.DataFrame(d)
-    processed_links = links_parallel(html_helper, links)
+    #processed_links = links_parallel(html_helper, links)
+    processed_links = links_parallel(get_paragraph_txt, links)
     df['text'] = processed_links
-    df.to_pickle('Data/df_website_content.pkl')
+    df.to_pickle('Data/df_website_paragraph_content.pkl')
